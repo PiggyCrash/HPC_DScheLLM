@@ -54,23 +54,22 @@ class PO:
         self.item = item
         self.qty = qty
 
-def generate_items(params):
-    p = params
-    seed_str = str(p.get('DESC', '0'))
-    random.seed(seed_str)
-    reg_items = [Item(f"Prod-Reg-{i+1:04d}", p) for i in range(p['INITIAL_REGISTERED_ITEMS'])]
-    num_unique_new = p['ORDERS_PER_DAY'] // 10
-    new_items_unique = [Item(f"Prod-New-{i+1:04d}", p, is_new=True) for i in range(num_unique_new)]
-    accepted_new_items = [it for it in new_items_unique if random.random() > p['DFM_REJECTION_RATE']]
-    return reg_items, new_items_unique, accepted_new_items
-
 def process_chunk(args):
-    reg_smt_lens, reg_test_lens, new_smt_lens, new_test_lens, accepted_flags, p, chunk_start, chunk_end, seed = args
-    random.seed(seed)
-    
+    p, chunk_start, chunk_end, chunk_seed, base_seed = args
+
+    random.seed(base_seed)
+    num_unique_new = p['ORDERS_PER_DAY'] // 10
+    reg_smt_lens = [random.randint(3, 5) for _ in range(p['INITIAL_REGISTERED_ITEMS'])]
+    reg_test_lens = [random.randint(2, 5) for _ in range(p['INITIAL_REGISTERED_ITEMS'])]
+    new_smt_lens = [random.randint(3, 5) for _ in range(num_unique_new)]
+    new_test_lens = [random.randint(2, 5) for _ in range(num_unique_new)]
+    accepted_flags = [random.random() > p['DFM_REJECTION_RATE'] for _ in range(num_unique_new)]
+
     num_reg = len(reg_smt_lens)
     num_new = len(new_smt_lens)
-    
+
+    random.seed(chunk_seed)
+
     reg_item_po_count = 0
     new_item_po_count = 0
     partial_final_po = 0
@@ -80,11 +79,11 @@ def process_chunk(args):
     partial_test_steps = 0
     partial_test_raw = 0
     partial_unique_items = set()
-    
+
     for i in range(chunk_start, chunk_end):
         is_new = random.random() < 0.1
         qty = random.randint(p['MIN_QTY_PER_PO'], p['MAX_QTY_PER_PO'])
-        
+
         if is_new:
             new_item_po_count += 1
             idx = random.randint(0, num_new - 1)
@@ -99,7 +98,7 @@ def process_chunk(args):
             smt_len = reg_smt_lens[idx]
             test_len = reg_test_lens[idx]
             item_id = f"reg_{idx}"
-        
+
         partial_final_po += 1
         partial_qty += qty
         partial_smt_steps += smt_len
@@ -107,7 +106,7 @@ def process_chunk(args):
         partial_test_steps += test_len
         partial_test_raw += qty * test_len
         partial_unique_items.add(item_id)
-    
+
     return {
         'reg_po': reg_item_po_count,
         'new_po': new_item_po_count,
@@ -123,14 +122,14 @@ def process_chunk(args):
 def run_simulation(params):
     seed_str = str(params.get('DESC', '0'))
     random.seed(seed_str)
-    
+
     p = params
     start_task = time.perf_counter()
 
     reg_items = [Item(f"Prod-Reg-{i+1:04d}", p) for i in range(p['INITIAL_REGISTERED_ITEMS'])]
     num_unique_new = p['ORDERS_PER_DAY'] // 10
     new_items_unique = [Item(f"Prod-New-{i+1:04d}", p, is_new=True) for i in range(num_unique_new)]
-    
+
     all_pos = []
     t1_s = time.perf_counter()
     reg_item_po_count = 0
@@ -177,7 +176,7 @@ def run_simulation(params):
     t6_d = time.perf_counter() - t6_s
 
     total_task_duration = time.perf_counter() - start_task
-    
+
     return {
         "1. OE - Total PO": (p['ORDERS_PER_DAY'], t1_d),
         "1. OE - Item Breakdown": (f"{reg_item_po_count} Reg / {new_item_po_count} New", None),
@@ -202,33 +201,22 @@ def run_simulation(params):
 def run_simulation_parallel(params, num_workers):
     p = params
     start_task = time.perf_counter()
-    
-    t_init_s = time.perf_counter()
-    reg_items, new_items_unique, accepted_new_items = generate_items(p)
-    num_unique_new = len(new_items_unique)
-    t_init_d = time.perf_counter() - t_init_s
-    
-    reg_smt_lens = [len(it.smt_sequence) for it in reg_items]
-    reg_test_lens = [len(it.test_sequence) for it in reg_items]
-    new_smt_lens = [len(it.smt_sequence) for it in new_items_unique]
-    new_test_lens = [len(it.test_sequence) for it in new_items_unique]
-    accepted_set = set(id(it) for it in accepted_new_items)
-    accepted_flags = [id(it) in accepted_set for it in new_items_unique]
-    
+    base_seed = str(p.get('DESC', '0'))
+
     n = p['ORDERS_PER_DAY']
     chunk_size = n // num_workers
     chunks = []
     for w in range(num_workers):
         cs = w * chunk_size
         ce = cs + chunk_size if w < num_workers - 1 else n
-        chunk_seed = f"{p.get('DESC', '0')}_chunk_{w}"
-        chunks.append((reg_smt_lens, reg_test_lens, new_smt_lens, new_test_lens, accepted_flags, p, cs, ce, chunk_seed))
-    
+        chunk_seed = f"{base_seed}_chunk_{w}"
+        chunks.append((p, cs, ce, chunk_seed, base_seed))
+
     t_par_s = time.perf_counter()
     with concurrent.futures.ProcessPoolExecutor(max_workers=num_workers) as executor:
         partial_results = list(executor.map(process_chunk, chunks))
     t_par_d = time.perf_counter() - t_par_s
-    
+
     t_reduce_s = time.perf_counter()
     total_reg_po = sum(pr['reg_po'] for pr in partial_results)
     total_new_po = sum(pr['new_po'] for pr in partial_results)
@@ -242,19 +230,31 @@ def run_simulation_parallel(params, num_workers):
     for pr in partial_results:
         all_unique.update(pr['unique_items'])
     t_reduce_d = time.perf_counter() - t_reduce_s
-    
+
+    num_unique_new = p['ORDERS_PER_DAY'] // 10
+    random.seed(base_seed)
+    accepted_count = sum(1 for _ in range(p['INITIAL_REGISTERED_ITEMS']) for _ in range(2))
+    random.seed(base_seed)
+    for _ in range(p['INITIAL_REGISTERED_ITEMS']):
+        random.randint(3, 5)
+        random.randint(2, 5)
+    for _ in range(num_unique_new):
+        random.randint(3, 5)
+        random.randint(2, 5)
+    accepted_count = sum(1 for _ in range(num_unique_new) if random.random() > p['DFM_REJECTION_RATE'])
+
     avg_smt = total_smt_steps / total_final_po if total_final_po > 0 else 0
     avg_test = total_test_steps / total_final_po if total_final_po > 0 else 0
-    
+
     total_task_duration = time.perf_counter() - start_task
     overhead = total_task_duration - t_par_d
-    
+
     result = {
-        "1. OE - Total PO": (p['ORDERS_PER_DAY'], t_init_d),
+        "1. OE - Total PO": (p['ORDERS_PER_DAY'], 0.0),
         "1. OE - Item Breakdown": (f"{total_reg_po} Reg / {total_new_po} New", None),
         "1. OE - New Item Types": (num_unique_new, None),
         "2. DFM - Proceeding PO": (total_final_po, t_par_d),
-        "2. DFM - Accepted New": (len(accepted_new_items), None),
+        "2. DFM - Accepted New": (accepted_count, None),
         "3. SMT - Total PO": (total_final_po, t_reduce_d),
         "3. SMT - Total Qty": (total_qty, None),
         "3. SMT - Total Step": (total_smt_steps, None),
@@ -293,7 +293,7 @@ def print_table(title, headers, all_results):
     for h in headers:
         h1 += f" | {h:<{c_w}}"
         h2 += f" | {'='*c_w}"
-    
+
     print(h1)
     print(h2)
 
@@ -308,7 +308,7 @@ def print_table(title, headers, all_results):
             for _ in headers: sep += f" | {'='*c_w}"
             print(sep)
             continue
-            
+
         row = f"{step:<{s_w}}"
         for res_dict in all_results:
             val, dur = res_dict.get(step, (None, None))
@@ -323,7 +323,7 @@ def benchmark():
     default = CONFIG['default_params']
     scenarios = CONFIG['benchmark_scenarios']
     num_cores = multiprocessing.cpu_count()
-    
+
     print(f"Current manufacture condition:")
     print(f"Orders/Day: {default['ORDERS_PER_DAY']}")
     print(f"Registered Items: {default['INITIAL_REGISTERED_ITEMS']}")
