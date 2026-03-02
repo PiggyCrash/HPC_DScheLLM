@@ -50,8 +50,7 @@ Turning point at 50.000+ POs :
 - **HPC Scaling (50,000+ PO)**: The benefits of distributing the JSS workload across multiple cores begin to outweigh the overhead.
 - **High Volume (200,000+ PO)**: Parallel execution demonstrates superior scaling, reducing execution time by over **75%** in massive datasets
 
-
-## System Workflow and Code Architecture
+### System Workflow and Code Architecture
 The prototype is structured into three primary modules:
 
 1. **`manufacture_flow.py`**: The core engine. 
