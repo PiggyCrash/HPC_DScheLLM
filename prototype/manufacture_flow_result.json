@@ -1,0 +1,293 @@
+{
+    "config_old": {
+        "scenarios": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5",
+            "6"
+        ],
+        "sequential": {
+            "1": {
+                "total": 0.005562899983488023,
+                "smt_duration": 0.0030024167938450873,
+                "testing_duration": 0.0025604831896429356,
+                "total_po": 492,
+                "total_new_rows": 2565733,
+                "smt_raw": 1094260,
+                "testing_raw": 933193,
+                "total_smt_machines": 13,
+                "total_testing_machines": 15
+            },
+            "2": {
+                "total": 0.01898950000759214,
+                "smt_duration": 0.010239064871814885,
+                "testing_duration": 0.008750435135777257,
+                "total_po": 4970,
+                "total_new_rows": 26062245,
+                "smt_raw": 11093550,
+                "testing_raw": 9480689,
+                "total_smt_machines": 25,
+                "total_testing_machines": 28
+            },
+            "3": {
+                "total": 0.03843289997894317,
+                "smt_duration": 0.020447931661180353,
+                "testing_duration": 0.017984968317762817,
+                "total_po": 9947,
+                "total_new_rows": 51913861,
+                "smt_raw": 21807915,
+                "testing_raw": 19181141,
+                "total_smt_machines": 49,
+                "total_testing_machines": 55
+            },
+            "4": {
+                "total": 0.07759500003885478,
+                "smt_duration": 0.041210245720293325,
+                "testing_duration": 0.03638475431856145,
+                "total_po": 19901,
+                "total_new_rows": 103865203,
+                "smt_raw": 43502870,
+                "testing_raw": 38408925,
+                "total_smt_machines": 98,
+                "total_testing_machines": 110
+            },
+            "5": {
+                "total": 0.07630890002474189,
+                "smt_duration": 0.04061943194075139,
+                "testing_duration": 0.035689468083990504,
+                "total_po": 19869,
+                "total_new_rows": 103818442,
+                "smt_raw": 43622500,
+                "testing_raw": 38328055,
+                "total_smt_machines": 135,
+                "total_testing_machines": 237
+            },
+            "6": {
+                "total": 0.1538777999812737,
+                "smt_duration": 0.0820836379118538,
+                "testing_duration": 0.07179416206941991,
+                "total_po": 39789,
+                "total_new_rows": 208838701,
+                "smt_raw": 87916238,
+                "testing_raw": 76895625,
+                "total_smt_machines": 196,
+                "total_testing_machines": 220
+            }
+        },
+        "parallel": {
+            "1": {
+                "total": 0.25569999997969717,
+                "total_minus_overhead": 0.25569359998917207,
+                "overhead": 6.399990525096655e-06,
+                "smt_duration": 0.13800333656274716,
+                "testing_duration": 0.1176902634264249,
+                "total_po": 492,
+                "total_new_rows": 2565733,
+                "smt_raw": 1094260,
+                "testing_raw": 933193,
+                "total_smt_machines": 13,
+                "total_testing_machines": 15
+            },
+            "2": {
+                "total": 0.26933140004985034,
+                "total_minus_overhead": 0.2693265000125393,
+                "overhead": 4.900037311017513e-06,
+                "smt_duration": 0.14521980590456374,
+                "testing_duration": 0.12410669410797559,
+                "total_po": 4970,
+                "total_new_rows": 26062245,
+                "smt_raw": 11093550,
+                "testing_raw": 9480689,
+                "total_smt_machines": 25,
+                "total_testing_machines": 28
+            },
+            "3": {
+                "total": 0.2690719999955036,
+                "total_minus_overhead": 0.26906700001563877,
+                "overhead": 4.999979864805937e-06,
+                "smt_duration": 0.14315504767043302,
+                "testing_duration": 0.12591195234520575,
+                "total_po": 9947,
+                "total_new_rows": 51913861,
+                "smt_raw": 21807915,
+                "testing_raw": 19181141,
+                "total_smt_machines": 49,
+                "total_testing_machines": 55
+            },
+            "4": {
+                "total": 0.2606876000063494,
+                "total_minus_overhead": 0.26068110001506284,
+                "overhead": 6.499991286545992e-06,
+                "smt_duration": 0.13844619087412596,
+                "testing_duration": 0.12223490914093688,
+                "total_po": 19901,
+                "total_new_rows": 103865203,
+                "smt_raw": 43502870,
+                "testing_raw": 38408925,
+                "total_smt_machines": 98,
+                "total_testing_machines": 110
+            },
+            "5": {
+                "total": 0.26627710001775995,
+                "total_minus_overhead": 0.26626990002114326,
+                "overhead": 7.199996616691351e-06,
+                "smt_duration": 0.1417361812091733,
+                "testing_duration": 0.12453371881196998,
+                "total_po": 19869,
+                "total_new_rows": 103818442,
+                "smt_raw": 43622500,
+                "testing_raw": 38328055,
+                "total_smt_machines": 135,
+                "total_testing_machines": 237
+            },
+            "6": {
+                "total": 0.2870286999968812,
+                "total_minus_overhead": 0.28702180000254884,
+                "overhead": 6.89999433234334e-06,
+                "smt_duration": 0.15310716365248833,
+                "testing_duration": 0.1339146363500605,
+                "total_po": 39789,
+                "total_new_rows": 208838701,
+                "smt_raw": 87916238,
+                "testing_raw": 76895625,
+                "total_smt_machines": 196,
+                "total_testing_machines": 220
+            }
+        }
+    },
+    "config": {
+        "scenarios": [
+            "7",
+            "8",
+            "9",
+            "10",
+            "11"
+        ],
+        "sequential": {
+            "7": {
+                "total": 0.14009669999359176,
+                "smt_duration": 0.07441608263260391,
+                "testing_duration": 0.06568061736098785,
+                "total_po": 49756,
+                "total_new_rows": 260862405,
+                "smt_raw": 109423102,
+                "testing_raw": 96578275,
+                "total_smt_machines": 250,
+                "total_testing_machines": 280
+            },
+            "8": {
+                "total": 0.2695450999890454,
+                "smt_duration": 0.1434113989280756,
+                "testing_duration": 0.1261337010609698,
+                "total_po": 99524,
+                "total_new_rows": 520679784,
+                "smt_raw": 218660232,
+                "testing_raw": 192316821,
+                "total_smt_machines": 490,
+                "total_testing_machines": 550
+            },
+            "9": {
+                "total": 0.5511956000118516,
+                "smt_duration": 0.29398229217579985,
+                "testing_duration": 0.2572133078360518,
+                "total_po": 198996,
+                "total_new_rows": 1039315179,
+                "smt_raw": 437553439,
+                "testing_raw": 382827709,
+                "total_smt_machines": 980,
+                "total_testing_machines": 1100
+            },
+            "10": {
+                "total": 1.4208204000024125,
+                "smt_duration": 0.7588575005797447,
+                "testing_duration": 0.6619628994226677,
+                "total_po": 497463,
+                "total_new_rows": 2597141110,
+                "smt_raw": 1094799776,
+                "testing_raw": 955010438,
+                "total_smt_machines": 2500,
+                "total_testing_machines": 2800
+            },
+            "11": {
+                "total": 2.7717379000387155,
+                "smt_duration": 1.4787539983522326,
+                "testing_duration": 1.2929839016864828,
+                "total_po": 994901,
+                "total_new_rows": 5204071024,
+                "smt_raw": 2191455625,
+                "testing_raw": 1916151603,
+                "total_smt_machines": 4900,
+                "total_testing_machines": 5500
+            }
+        },
+        "parallel": {
+            "7": {
+                "total": 0.325425399991218,
+                "total_minus_overhead": 0.32541519997175783,
+                "overhead": 1.0200019460171461e-05,
+                "smt_duration": 0.1728529252445728,
+                "testing_duration": 0.15256227472718506,
+                "total_po": 49756,
+                "total_new_rows": 260862405,
+                "smt_raw": 109423102,
+                "testing_raw": 96578275,
+                "total_smt_machines": 250,
+                "total_testing_machines": 280
+            },
+            "8": {
+                "total": 0.2995919000240974,
+                "total_minus_overhead": 0.2995820000069216,
+                "overhead": 9.90001717582345e-06,
+                "smt_duration": 0.15939252361259568,
+                "testing_duration": 0.1401894763943259,
+                "total_po": 99524,
+                "total_new_rows": 520679784,
+                "smt_raw": 218660232,
+                "testing_raw": 192316821,
+                "total_smt_machines": 490,
+                "total_testing_machines": 550
+            },
+            "9": {
+                "total": 0.34148759994423017,
+                "total_minus_overhead": 0.34147779998602346,
+                "overhead": 9.7999582067132e-06,
+                "smt_duration": 0.18212849733358172,
+                "testing_duration": 0.15934930265244174,
+                "total_po": 198996,
+                "total_new_rows": 1039315179,
+                "smt_raw": 437553439,
+                "testing_raw": 382827709,
+                "total_smt_machines": 980,
+                "total_testing_machines": 1100
+            },
+            "10": {
+                "total": 0.4984155999845825,
+                "total_minus_overhead": 0.4984006999875419,
+                "overhead": 1.4899997040629387e-05,
+                "smt_duration": 0.26619487549524135,
+                "testing_duration": 0.2322058244923005,
+                "total_po": 497463,
+                "total_new_rows": 2597141110,
+                "smt_raw": 1094799776,
+                "testing_raw": 955010438,
+                "total_smt_machines": 2500,
+                "total_testing_machines": 2800
+            },
+            "11": {
+                "total": 0.6876149000017904,
+                "total_minus_overhead": 0.6875990999978967,
+                "overhead": 1.580000389367342e-05,
+                "smt_duration": 0.3668420157515918,
+                "testing_duration": 0.32075708424630495,
+                "total_po": 994901,
+                "total_new_rows": 5204071024,
+                "smt_raw": 2191455625,
+                "testing_raw": 1916151603,
+                "total_smt_machines": 4900,
+                "total_testing_machines": 5500
+            }
+        }
+    }
+}

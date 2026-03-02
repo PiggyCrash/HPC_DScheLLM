@@ -54,17 +54,23 @@ class PO:
         self.item = item
         self.qty = qty
 
+def generate_item_data(params, base_seed):
+    random.seed(base_seed)
+    p = params
+    num_reg = p['INITIAL_REGISTERED_ITEMS']
+    num_new = p['ORDERS_PER_DAY'] // 10
+    reg_smt_lens = [random.randint(3, 5) for _ in range(num_reg)]
+    reg_test_lens = [random.randint(2, 5) for _ in range(num_reg)]
+    new_smt_lens = [random.randint(3, 5) for _ in range(num_new)]
+    new_test_lens = [random.randint(2, 5) for _ in range(num_new)]
+    accepted_flags = [random.random() > p['DFM_REJECTION_RATE'] for _ in range(num_new)]
+    accepted_count = sum(accepted_flags)
+    return reg_smt_lens, reg_test_lens, new_smt_lens, new_test_lens, accepted_flags, accepted_count
+
 def process_chunk(args):
     p, chunk_start, chunk_end, chunk_seed, base_seed = args
 
-    random.seed(base_seed)
-    num_unique_new = p['ORDERS_PER_DAY'] // 10
-    reg_smt_lens = [random.randint(3, 5) for _ in range(p['INITIAL_REGISTERED_ITEMS'])]
-    reg_test_lens = [random.randint(2, 5) for _ in range(p['INITIAL_REGISTERED_ITEMS'])]
-    new_smt_lens = [random.randint(3, 5) for _ in range(num_unique_new)]
-    new_test_lens = [random.randint(2, 5) for _ in range(num_unique_new)]
-    accepted_flags = [random.random() > p['DFM_REJECTION_RATE'] for _ in range(num_unique_new)]
-
+    reg_smt_lens, reg_test_lens, new_smt_lens, new_test_lens, accepted_flags, _ = generate_item_data(p, base_seed)
     num_reg = len(reg_smt_lens)
     num_new = len(new_smt_lens)
 
@@ -119,105 +125,25 @@ def process_chunk(args):
         'unique_items': partial_unique_items
     }
 
-def run_simulation(params):
-    seed_str = str(params.get('DESC', '0'))
-    random.seed(seed_str)
-
+def build_chunks(params, num_chunks):
     p = params
-    start_task = time.perf_counter()
-
-    reg_items = [Item(f"Prod-Reg-{i+1:04d}", p) for i in range(p['INITIAL_REGISTERED_ITEMS'])]
-    num_unique_new = p['ORDERS_PER_DAY'] // 10
-    new_items_unique = [Item(f"Prod-New-{i+1:04d}", p, is_new=True) for i in range(num_unique_new)]
-
-    all_pos = []
-    t1_s = time.perf_counter()
-    reg_item_po_count = 0
-    new_item_po_count = 0
-    for i in range(p['ORDERS_PER_DAY']):
-        is_new = random.random() < 0.1
-        if is_new:
-            item = random.choice(new_items_unique)
-            new_item_po_count += 1
-        else:
-            item = random.choice(reg_items)
-            reg_item_po_count += 1
-        qty = random.randint(p['MIN_QTY_PER_PO'], p['MAX_QTY_PER_PO'])
-        all_pos.append(PO(f"PO-{i+1:04d}", item, qty))
-    t1_d = time.perf_counter() - t1_s
-
-    t2_s = time.perf_counter()
-    accepted_new_items = [it for it in new_items_unique if random.random() > p['DFM_REJECTION_RATE']]
-    final_pos = [po for po in all_pos if not po.item.is_new or po.item in accepted_new_items]
-    t2_d = time.perf_counter() - t2_s
-
-    t3_s = time.perf_counter()
-    total_po = len(final_pos)
-    total_qty = sum(po.qty for po in final_pos)
-    total_steps = sum(len(po.item.smt_sequence) for po in final_pos)
-    smt_raw_data = sum(po.qty * len(po.item.smt_sequence) for po in final_pos)
-    avg_steps = total_steps / total_po if total_po > 0 else 0
-    t3_d = time.perf_counter() - t3_s
-
-    t4_s = time.perf_counter()
-    assembly_data = total_qty
-    t4_d = time.perf_counter() - t4_s
-
-    t5_s = time.perf_counter()
-    total_po_test = len(final_pos)
-    total_qty_test = sum(po.qty for po in final_pos)
-    total_steps_test = sum(len(po.item.test_sequence) for po in final_pos)
-    testing_raw_data = sum(po.qty * len(po.item.test_sequence) for po in final_pos)
-    avg_steps_test = total_steps_test / total_po_test if total_po_test > 0 else 0
-    t5_d = time.perf_counter() - t5_s
-
-    t6_s = time.perf_counter()
-    quality_check = total_qty_test
-    t6_d = time.perf_counter() - t6_s
-
-    total_task_duration = time.perf_counter() - start_task
-
-    return {
-        "1. OE - Total PO": (p['ORDERS_PER_DAY'], t1_d),
-        "1. OE - Item Breakdown": (f"{reg_item_po_count} Reg / {new_item_po_count} New", None),
-        "1. OE - New Item Types": (num_unique_new, None),
-        "2. DFM - Proceeding PO": (len(final_pos), t2_d),
-        "2. DFM - Accepted New": (len(accepted_new_items), None),
-        "3. SMT - Total PO": (total_po, t3_d),
-        "3. SMT - Total Qty": (total_qty, None),
-        "3. SMT - Total Step": (total_steps, None),
-        "3. SMT - Row Calculation": (f"{total_qty} x {avg_steps:.2f}", None),
-        "3. SMT - Raw Data": (smt_raw_data, None),
-        "4. Assembly Data (Sum Qty)": (assembly_data, t4_d),
-        "5. Testing - Total PO": (total_po_test, t5_d),
-        "5. Testing - Total Qty": (total_qty_test, None),
-        "5. Testing - Total Step": (total_steps_test, None),
-        "5. Testing - Row Calculation": (f"{total_qty_test} x {avg_steps_test:.2f}", None),
-        "5. Testing - Raw Data": (testing_raw_data, None),
-        "6. Quality Check (Sum Qty)": (quality_check, t6_d),
-        "Total New Rows": (len(final_pos) + len(set(po.item for po in final_pos)) + smt_raw_data + total_qty + testing_raw_data + total_qty_test, total_task_duration)
-    }
-
-def run_simulation_parallel(params, num_workers):
-    p = params
-    start_task = time.perf_counter()
     base_seed = str(p.get('DESC', '0'))
-
     n = p['ORDERS_PER_DAY']
-    chunk_size = n // num_workers
+    chunk_size = n // num_chunks
     chunks = []
-    for w in range(num_workers):
+    for w in range(num_chunks):
         cs = w * chunk_size
-        ce = cs + chunk_size if w < num_workers - 1 else n
+        ce = cs + chunk_size if w < num_chunks - 1 else n
         chunk_seed = f"{base_seed}_chunk_{w}"
         chunks.append((p, cs, ce, chunk_seed, base_seed))
+    return chunks
 
-    t_par_s = time.perf_counter()
-    with concurrent.futures.ProcessPoolExecutor(max_workers=num_workers) as executor:
-        partial_results = list(executor.map(process_chunk, chunks))
-    t_par_d = time.perf_counter() - t_par_s
+def reduce_results(partial_results, params):
+    p = params
+    base_seed = str(p.get('DESC', '0'))
+    num_unique_new = p['ORDERS_PER_DAY'] // 10
+    _, _, _, _, accepted_flags, accepted_count = generate_item_data(p, base_seed)
 
-    t_reduce_s = time.perf_counter()
     total_reg_po = sum(pr['reg_po'] for pr in partial_results)
     total_new_po = sum(pr['new_po'] for pr in partial_results)
     total_final_po = sum(pr['final_po'] for pr in partial_results)
@@ -229,46 +155,86 @@ def run_simulation_parallel(params, num_workers):
     all_unique = set()
     for pr in partial_results:
         all_unique.update(pr['unique_items'])
-    t_reduce_d = time.perf_counter() - t_reduce_s
-
-    num_unique_new = p['ORDERS_PER_DAY'] // 10
-    random.seed(base_seed)
-    accepted_count = sum(1 for _ in range(p['INITIAL_REGISTERED_ITEMS']) for _ in range(2))
-    random.seed(base_seed)
-    for _ in range(p['INITIAL_REGISTERED_ITEMS']):
-        random.randint(3, 5)
-        random.randint(2, 5)
-    for _ in range(num_unique_new):
-        random.randint(3, 5)
-        random.randint(2, 5)
-    accepted_count = sum(1 for _ in range(num_unique_new) if random.random() > p['DFM_REJECTION_RATE'])
 
     avg_smt = total_smt_steps / total_final_po if total_final_po > 0 else 0
     avg_test = total_test_steps / total_final_po if total_final_po > 0 else 0
 
+    return {
+        'total_reg_po': total_reg_po,
+        'total_new_po': total_new_po,
+        'total_final_po': total_final_po,
+        'total_qty': total_qty,
+        'total_smt_steps': total_smt_steps,
+        'total_smt_raw': total_smt_raw,
+        'total_test_steps': total_test_steps,
+        'total_test_raw': total_test_raw,
+        'all_unique': all_unique,
+        'avg_smt': avg_smt,
+        'avg_test': avg_test,
+        'num_unique_new': num_unique_new,
+        'accepted_count': accepted_count
+    }
+
+def format_result(params, reduced, timings):
+    p = params
+    r = reduced
+    t = timings
+    result = {
+        "1. OE - Total PO": (p['ORDERS_PER_DAY'], t.get('t1', 0.0)),
+        "1. OE - Item Breakdown": (f"{r['total_reg_po']} Reg / {r['total_new_po']} New", None),
+        "1. OE - New Item Types": (r['num_unique_new'], None),
+        "2. DFM - Proceeding PO": (r['total_final_po'], t.get('t2', 0.0)),
+        "2. DFM - Accepted New": (r['accepted_count'], None),
+        "3. SMT - Total PO": (r['total_final_po'], t.get('t3', 0.0)),
+        "3. SMT - Total Qty": (r['total_qty'], None),
+        "3. SMT - Total Step": (r['total_smt_steps'], None),
+        "3. SMT - Row Calculation": (f"{r['total_qty']} x {r['avg_smt']:.2f}", None),
+        "3. SMT - Raw Data": (r['total_smt_raw'], None),
+        "4. Assembly Data (Sum Qty)": (r['total_qty'], t.get('t4', 0.0)),
+        "5. Testing - Total PO": (r['total_final_po'], t.get('t5', 0.0)),
+        "5. Testing - Total Qty": (r['total_qty'], None),
+        "5. Testing - Total Step": (r['total_test_steps'], None),
+        "5. Testing - Row Calculation": (f"{r['total_qty']} x {r['avg_test']:.2f}", None),
+        "5. Testing - Raw Data": (r['total_test_raw'], None),
+        "6. Quality Check (Sum Qty)": (r['total_qty'], t.get('t6', 0.0)),
+        "Total New Rows": (
+            r['total_final_po'] + len(r['all_unique']) + r['total_smt_raw'] + r['total_qty'] + r['total_test_raw'] + r['total_qty'],
+            t['total']
+        )
+    }
+    return result
+
+def run_simulation(params, num_chunks):
+    p = params
+    start_task = time.perf_counter()
+    chunks = build_chunks(p, num_chunks)
+
+    t1_s = time.perf_counter()
+    partial_results = [process_chunk(c) for c in chunks]
+    t1_d = time.perf_counter() - t1_s
+
+    total_task_duration = time.perf_counter() - start_task
+    reduced = reduce_results(partial_results, p)
+
+    timings = {'t1': t1_d, 't2': 0.0, 't3': 0.0, 't4': 0.0, 't5': 0.0, 't6': 0.0, 'total': total_task_duration}
+    return format_result(p, reduced, timings)
+
+def run_simulation_parallel(params, num_workers):
+    p = params
+    start_task = time.perf_counter()
+    chunks = build_chunks(p, num_workers)
+
+    t_par_s = time.perf_counter()
+    with concurrent.futures.ProcessPoolExecutor(max_workers=num_workers) as executor:
+        partial_results = list(executor.map(process_chunk, chunks))
+    t_par_d = time.perf_counter() - t_par_s
+
     total_task_duration = time.perf_counter() - start_task
     overhead = total_task_duration - t_par_d
+    reduced = reduce_results(partial_results, p)
 
-    result = {
-        "1. OE - Total PO": (p['ORDERS_PER_DAY'], 0.0),
-        "1. OE - Item Breakdown": (f"{total_reg_po} Reg / {total_new_po} New", None),
-        "1. OE - New Item Types": (num_unique_new, None),
-        "2. DFM - Proceeding PO": (total_final_po, t_par_d),
-        "2. DFM - Accepted New": (accepted_count, None),
-        "3. SMT - Total PO": (total_final_po, t_reduce_d),
-        "3. SMT - Total Qty": (total_qty, None),
-        "3. SMT - Total Step": (total_smt_steps, None),
-        "3. SMT - Row Calculation": (f"{total_qty} x {avg_smt:.2f}", None),
-        "3. SMT - Raw Data": (total_smt_raw, None),
-        "4. Assembly Data (Sum Qty)": (total_qty, 0.0),
-        "5. Testing - Total PO": (total_final_po, 0.0),
-        "5. Testing - Total Qty": (total_qty, None),
-        "5. Testing - Total Step": (total_test_steps, None),
-        "5. Testing - Row Calculation": (f"{total_qty} x {avg_test:.2f}", None),
-        "5. Testing - Raw Data": (total_test_raw, None),
-        "6. Quality Check (Sum Qty)": (total_qty, 0.0),
-        "Total New Rows": (total_final_po + len(all_unique) + total_smt_raw + total_qty + total_test_raw + total_qty, total_task_duration)
-    }
+    timings = {'t1': 0.0, 't2': t_par_d, 't3': 0.0, 't4': 0.0, 't5': 0.0, 't6': 0.0, 'total': total_task_duration}
+    result = format_result(p, reduced, timings)
     result['_overhead'] = overhead
     result['_par_work'] = t_par_d
     return result
@@ -319,6 +285,80 @@ def print_table(title, headers, all_results):
             row += f" | {combined:<{c_w}}"
         print(row)
 
+def run_config(config, num_cores):
+    default = config['default_params']
+    scenarios = config['benchmark_scenarios']
+
+    scenario_params = []
+    headers = []
+    for sc in scenarios:
+        p = default.copy()
+        p.update(sc)
+        scenario_params.append(p)
+        headers.append(sc.get('DESC', 'Trial'))
+
+    seq_results = [run_simulation(p, num_cores) for p in scenario_params]
+    par_results = [run_simulation_parallel(p, num_cores) for p in scenario_params]
+
+    return headers, scenario_params, seq_results, par_results
+
+def extract_chart_data(headers, scenario_params, seq_results, par_results):
+    chart_data = {
+        "scenarios": headers,
+        "sequential": {},
+        "parallel": {}
+    }
+    for i, h in enumerate(headers):
+        p = scenario_params[i]
+        seq_total = seq_results[i]["Total New Rows"][1]
+        par_total = par_results[i]["Total New Rows"][1]
+        par_overhead = par_results[i].get('_overhead', 0.0)
+        par_minus_overhead = par_total - par_overhead
+
+        total_smt_machines = (p['NUM_PCBA_MACHINES'] + p['NUM_SOLDER_PASTE_MACHINES'] +
+                              p['NUM_PNP_MACHINES'] + p['NUM_REFLOW_MACHINES'] + p['NUM_OVEN_MACHINES'])
+        total_testing_machines = (p['NUM_ICT_MACHINES'] + p['NUM_BOARD_TEST_MACHINES'] +
+                                  p['NUM_FCT_MACHINES'] + p['NUM_VISUAL_TEST_MACHINES'] +
+                                  p['NUM_FLYING_PROBE_MACHINES'] + p['NUM_XRAY_MACHINES'])
+
+        seq_smt_raw = seq_results[i]["3. SMT - Raw Data"][0]
+        seq_test_raw = seq_results[i]["5. Testing - Raw Data"][0]
+        seq_data_total = seq_smt_raw + seq_test_raw
+        seq_smt_dur = seq_total * (seq_smt_raw / seq_data_total) if seq_data_total > 0 else 0
+        seq_test_dur = seq_total * (seq_test_raw / seq_data_total) if seq_data_total > 0 else 0
+
+        par_smt_raw = par_results[i]["3. SMT - Raw Data"][0]
+        par_test_raw = par_results[i]["5. Testing - Raw Data"][0]
+        par_data_total = par_smt_raw + par_test_raw
+        par_smt_dur = par_minus_overhead * (par_smt_raw / par_data_total) if par_data_total > 0 else 0
+        par_test_dur = par_minus_overhead * (par_test_raw / par_data_total) if par_data_total > 0 else 0
+
+        chart_data["sequential"][h] = {
+            "total": seq_total,
+            "smt_duration": seq_smt_dur,
+            "testing_duration": seq_test_dur,
+            "total_po": seq_results[i]["2. DFM - Proceeding PO"][0],
+            "total_new_rows": seq_results[i]["Total New Rows"][0],
+            "smt_raw": seq_smt_raw,
+            "testing_raw": seq_test_raw,
+            "total_smt_machines": total_smt_machines,
+            "total_testing_machines": total_testing_machines
+        }
+        chart_data["parallel"][h] = {
+            "total": par_total,
+            "total_minus_overhead": par_minus_overhead,
+            "overhead": par_overhead,
+            "smt_duration": par_smt_dur,
+            "testing_duration": par_test_dur,
+            "total_po": par_results[i]["2. DFM - Proceeding PO"][0],
+            "total_new_rows": par_results[i]["Total New Rows"][0],
+            "smt_raw": par_smt_raw,
+            "testing_raw": par_test_raw,
+            "total_smt_machines": total_smt_machines,
+            "total_testing_machines": total_testing_machines
+        }
+    return chart_data
+
 def benchmark():
     default = CONFIG['default_params']
     scenarios = CONFIG['benchmark_scenarios']
@@ -342,7 +382,7 @@ def benchmark():
         headers.append(sc.get('DESC', 'Trial'))
 
     start_seq = time.perf_counter()
-    seq_results = [run_simulation(p) for p in scenario_params]
+    seq_results = [run_simulation(p, num_cores) for p in scenario_params]
     total_seq_wall = time.perf_counter() - start_seq
 
     print_table("Sequential Execution", headers, seq_results)
@@ -381,6 +421,29 @@ def benchmark():
     print(f"Parallel (minus Overhead):   {corrected_par:.6f}s")
     print(f"Parallel Speedup Factor:     {total_seq_wall/total_par_wall:.2f}x")
     print(f"Corrected Speedup Factor:    {total_seq_wall/corrected_par:.2f}x")
+
+    config_old_path = os.path.join(os.path.dirname(__file__), 'config_old.json')
+    with open(config_old_path, 'r') as f:
+        config_old = json.load(f)
+
+    print(f"\n{'='*60}")
+    print(f"Running config_old.json scenarios...")
+    print(f"{'='*60}")
+
+    old_headers, old_params, old_seq, old_par = run_config(config_old, num_cores)
+
+    print_table("Sequential Execution (config_old)", old_headers, old_seq)
+    print_table(f"Data-Parallel Execution (config_old, {num_cores} cores)", old_headers, old_par)
+
+    export_data = {
+        "config_old": extract_chart_data(old_headers, old_params, old_seq, old_par),
+        "config": extract_chart_data(headers, scenario_params, seq_results, par_results)
+    }
+
+    result_path = os.path.join(os.path.dirname(__file__), 'manufacture_flow_result.json')
+    with open(result_path, 'w') as f:
+        json.dump(export_data, f, indent=4)
+    print(f"\nResults exported to {result_path}")
 
 if __name__ == "__main__":
     benchmark()
