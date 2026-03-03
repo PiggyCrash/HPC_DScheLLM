@@ -19,7 +19,7 @@ This prototype is a simulation of an electronics manufacturing process. Featurin
 The simulation demonstrates an exponential growth in data rows relative to the initial PO count. For instance, roughly **1,000 POs** generate approximately **5 Million rows** of manufacturing data, as each PO is decomposed into specific machine instructions and state logs.
 
 ### JSS Complexity: SMT and Testing Phases
-The most computationally intensive steps are **Step 3 (SMT)** and **Step 5 (Testing)**. These steps implement a **Job Shop Scheduling (JSS)** algorithm.
+The JSS step used a *Stochastic (Randomized) Selection* approach, with most computationally intensive steps are **Step 3 (SMT)** and **Step 5 (Testing)**. These steps implement a **Job Shop Scheduling (JSS)** algorithm.
 
 **Complexity Drivers :** 
 - **Random Mapping**: Each board is assigned to available machines based on a randomized mapping logic
@@ -33,11 +33,11 @@ Analysis of the raw simulation data reveals how machine allocation affects compl
 ```
 Despite nearly identical PO and row counts, Scenario 5 involves a much larger machine pool. In the JSS algorithm, this results in a wider search space for "Random Mapping," which impacts the simulation's state management and execution duration.
 
+
 ### Performance Analysis
 The following chart visualizes the comparison between Sequential and Parallel execution across different company scales.
 
 <img src="manufacture_flow_chart.png" alt="Manufacturing Flow Chart" width="600">
-
 
 | Scenario | Total PO | Total New Rows | Sequential (s) | Parallel (minus Overhead) (s) |
 | :--- | :--- | :--- | :--- | :--- |
@@ -49,6 +49,8 @@ Turning point at 50.000+ POs :
 - **Small Scale (< 50,000 PO)**: Sequential execution is generally faster due to the absence of parallel overhead.
 - **HPC Scaling (50,000+ PO)**: The benefits of distributing the JSS workload across multiple cores begin to outweigh the overhead.
 - **High Volume (200,000+ PO)**: Parallel execution demonstrates superior scaling, reducing execution time by over **75%** in massive datasets
+
+This prototype used *Static Load Balancing*, with *Map-Reduce pattern* using *Data Decomposition*.
 
 ### System Workflow and Code Architecture
 The prototype is structured into three primary modules:
